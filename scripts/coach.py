@@ -105,8 +105,60 @@ SYSTEM_PROMPT = """
 """.strip()
 
 
+# â”€â”€ å½“æ—¥ã®ç´¯è¨ˆã‚’Notionã‹ã‚‰å–å¾— â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def get_today_totals(target_date: str) -> dict:
+    """å½“æ—¥ã®é£Ÿäº‹è¨˜éŒ²ç´¯è¨ˆã‚’è¿”ã™ã€‚ãƒ¬ã‚³ãƒ¼ãƒ‰ãªã‘ã‚Œã°å…¨ã¦0"""
+    existing = find_today_meal_record(target_date)
+    if not existing:
+        return {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0,
+                "content": "", "is_practice_day": False}
+    props = existing["properties"]
+    content_rt = props.get("é£Ÿäº‹å†…å®¹", {}).get("rich_text", [])
+    return {
+        "kcal":           props.get("ã‚«ãƒ­ãƒªãƒ¼(kcal)", {}).get("number") or 0,
+        "protein":        props.get("ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)",  {}).get("number") or 0,
+        "carbs":          props.get("ç‚­æ°´åŒ–ç‰©(g)",    {}).get("number") or 0,
+        "fat":            props.get("è„‚è³ª(g)",        {}).get("number") or 0,
+        "content":        content_rt[0]["text"]["content"] if content_rt else "",
+        "is_practice_day":props.get("ç·´ç¿’æ—¥", {}).get("checkbox", False),
+    }
+
+
 # â”€â”€ Claude API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-def ask_claude(user_message: str) -> str:
+def ask_claude(user_message: str, today_totals: dict, target_date: str) -> str:
+    # ç·´ç¿’æ—¥ã‹ã©ã†ã‹ã§ç›®æ¨™å€¤ã‚’åˆ‡ã‚Šæ›¿ãˆ
+    is_practice = today_totals["is_practice_day"]
+    goal_kcal    = 2700  if is_practice else 2100
+    goal_protein = 117   if is_practice else 104
+    goal_carbs   = 390   if is_practice else 260
+    goal_fat     = 60    if is_practice else 58
+
+    # æ®‹ã‚Š = ç›®æ¨™ - ç´¯è¨ˆï¼ˆè¿½è¨˜åˆ†ã‚’è¨ˆç®—ã™ã‚‹å‰ã®çŠ¶æ…‹ï¼‰
+    rem_kcal    = max(0, goal_kcal    - today_totals["kcal"])
+    rem_protein = max(0, goal_protein - today_totals["protein"])
+    rem_carbs   = max(0, goal_carbs   - today_totals["carbs"])
+    rem_fat     = max(0, goal_fat     - today_totals["fat"])
+
+    context = f"""
+ã€{target_date} ã®å½“æ—¥ç´¯è¨ˆï¼ˆä»Šå›žã®å…¥åŠ›ã‚’åŠ ç®—ã™ã‚‹å‰ï¼‰ã€‘
+- ã‚«ãƒ­ãƒªãƒ¼ï¼š{today_totals['kcal']} kcalï¼ˆç›®æ¨™ {goal_kcal} kcalï¼‰
+- ã‚¿ãƒ³ãƒ‘ã‚¯è³ªï¼š{today_totals['protein']}gï¼ˆç›®æ¨™ {goal_protein}gï¼‰
+- ç‚­æ°´åŒ–ç‰©ï¼š{today_totals['carbs']}gï¼ˆç›®æ¨™ {goal_carbs}gï¼‰
+- è„‚è³ªï¼š{today_totals['fat']}gï¼ˆç›®æ¨™ {goal_fat}gï¼‰
+- ã“ã‚Œã¾ã§ã®é£Ÿäº‹ï¼š{today_totals['content'] or 'ãªã—'}
+- ç·´ç¿’æ—¥ï¼š{'ã¯ã„' if is_practice else 'ã„ã„ãˆ'}
+
+ã€ä»Šå›žåŠ ç®—å‰ã®æ®‹ã‚Šå¿…è¦é‡ã€‘
+- ã‚«ãƒ­ãƒªãƒ¼ï¼šæ®‹ã‚Š {rem_kcal} kcal
+- ã‚¿ãƒ³ãƒ‘ã‚¯è³ªï¼šæ®‹ã‚Š {rem_protein}g
+- ç‚­æ°´åŒ–ç‰©ï¼šæ®‹ã‚Š {rem_carbs}g
+- è„‚è³ªï¼šæ®‹ã‚Š {rem_fat}g
+
+---
+ä»Šå›žã®å…¥åŠ›ï¼š
+{user_message}
+"""
+
     resp = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
@@ -117,8 +169,8 @@ def ask_claude(user_message: str) -> str:
         json={
             "model": "claude-opus-4-5",
             "max_tokens": 2048,
-            "system": SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": user_message}],
+            "system": SYSTEM_PROMPT + "\n\nã€è¿½åŠ ãƒ«ãƒ¼ãƒ«ã€‘å›žç­”ã®æœ€å¾Œã«ã€ŒðŸ“Š æœ¬æ—¥ã®æ®‹ã‚Šç›®æ¨™ã€ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’å¿…ãšè¿½åŠ ã™ã‚‹ã€‚ä»Šå›žã®é£Ÿäº‹ã‚’åŠ ç®—ã—ãŸå¾Œã®æ®‹ã‚Šå¿…è¦é‡ï¼ˆã‚«ãƒ­ãƒªãƒ¼ãƒ»Pãƒ»Fãƒ»Cï¼‰ã‚’è¡¨ç¤ºã—ã€æ®‹ã‚Šã‚’æº€ãŸã™ãŸã‚ã®å…·ä½“çš„ãªé£Ÿå“ä¾‹ã‚’1ã€œ2å€‹ææ¡ˆã™ã‚‹ã“ã¨ã€‚",
+            "messages": [{"role": "user", "content": context}],
         },
     )
     resp.raise_for_status()
@@ -324,7 +376,15 @@ def post_github_comment(body: str):
 def main():
     print(f"å…¥åŠ›:\n{ISSUE_BODY}\n")
 
-    claude_response = ask_claude(ISSUE_BODY)
+    # æ—¥ä»˜ã‚’å…¥åŠ›ã‹ã‚‰æŠ½å‡ºï¼ˆãªã‘ã‚Œã°ä»Šæ—¥ï¼‰
+    date_match = re.search(r"(\d{4}-\d{2}-\d{2})", ISSUE_BODY)
+    target_date = date_match.group(1) if date_match else date.today().isoformat()
+
+    # å½“æ—¥ç´¯è¨ˆã‚’Notionã‹ã‚‰å–å¾—
+    today_totals = get_today_totals(target_date)
+    print(f"å½“æ—¥ç´¯è¨ˆ: {today_totals}\n")
+
+    claude_response = ask_claude(ISSUE_BODY, today_totals, target_date)
     print(f"Claudeå¿œç­”:\n{claude_response}\n")
 
     notion_data   = extract_json(claude_response)
