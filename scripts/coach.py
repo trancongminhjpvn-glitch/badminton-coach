@@ -199,40 +199,29 @@ def extract_json(text: str) -> dict | None:
 
 
 # â”€â”€ Notion: å½“æ—¥ã®é£Ÿäº‹è¨˜éŒ²ã‚’æ¤œç´¢ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-def find_today_meal_record(target_date: str) -> dict | None:
-    """æŒ‡å®šæ—¥ä»˜ã®é£Ÿäº‹è¨˜éŒ²ãƒšãƒ¼ã‚¸ã‚’æ¤œç´¢ã—ã¦è¿”ã™"""
-    body = {
-        "filter": {
-            "property": "æ—¥ä»˜",
-            "title": {"equals": target_date}
-        }
-    }
+def find_record_by_date(db_key: str, target_date: str) -> dict | None:
+    """æŒ‡å®šDBã‹ã‚‰å½“æ—¥æ—¥ä»˜ã®ãƒ¬ã‚³ãƒ¼ãƒ‰ã‚’ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆå´ã§ãƒ•ã‚£ãƒ«ã‚¿ã—ã¦è¿”ã™"""
     resp = requests.post(
-        f"https://api.notion.com/v1/databases/{DB['é£Ÿäº‹è¨˜éŒ²']}/query",
+        f"https://api.notion.com/v1/databases/{DB[db_key]}/query",
         headers=NOTION_HEADERS,
-        json=body,
+        json={"page_size": 50},
     )
     resp.raise_for_status()
-    results = resp.json().get("results", [])
-    return results[0] if results else None
+    for page in resp.json().get("results", []):
+        title_list = page.get("properties", {}).get("æ—¥ä»˜", {}).get("title", [])
+        if title_list:
+            title_val = title_list[0].get("plain_text", "")
+            if target_date in title_val:
+                return page
+    return None
+
+
+def find_today_meal_record(target_date: str) -> dict | None:
+    return find_record_by_date("é£Ÿäº‹è¨˜éŒ²", target_date)
 
 
 def find_today_practice_record(target_date: str) -> dict | None:
-    """æŒ‡å®šæ—¥ä»˜ã®ç·´ç¿’è¨˜éŒ²ãƒšãƒ¼ã‚¸ã‚’æ¤œç´¢ã—ã¦è¿”ã™"""
-    body = {
-        "filter": {
-            "property": "æ—¥ä»˜",
-            "title": {"equals": target_date}
-        }
-    }
-    resp = requests.post(
-        f"https://api.notion.com/v1/databases/{DB['ç·´ç¿’è¨˜éŒ²']}/query",
-        headers=NOTION_HEADERS,
-        json=body,
-    )
-    resp.raise_for_status()
-    results = resp.json().get("results", [])
-    return results[0] if results else None
+    return find_record_by_date("ç·´ç¿’è¨˜éŒ²", target_date)
 
 
 # â”€â”€ Notion: ä¿å­˜ãƒ»æ›´æ–° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
