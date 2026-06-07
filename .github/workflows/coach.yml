@@ -1,4 +1,4 @@
-name: ðŸ¸ Badminton Coach
+name: Badminton Coach
 
 on:
   issues:
@@ -23,26 +23,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests PyNaCl
 
-      - name: Set issue body (issue opened)
-        if: github.event_name == 'issues'
-        run: echo "ISSUE_BODY<<EOF" >> $GITHUB_ENV && echo "${{ github.event.issue.body }}" >> $GITHUB_ENV && echo "EOF" >> $GITHUB_ENV
-
-      - name: Set issue body (comment)
-        if: github.event_name == 'issue_comment'
-        run: echo "ISSUE_BODY<<EOF" >> $GITHUB_ENV && echo "${{ github.event.comment.body }}" >> $GITHUB_ENV && echo "EOF" >> $GITHUB_ENV
-
-      - name: Set issue number (issue opened)
-        if: github.event_name == 'issues'
-        run: echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
-
-      - name: Set issue number (comment)
-        if: github.event_name == 'issue_comment'
-        run: echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
-
       - name: Run Coach
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NOTION_TOKEN:      ${{ secrets.NOTION_TOKEN }}
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: python scripts/coach.py
