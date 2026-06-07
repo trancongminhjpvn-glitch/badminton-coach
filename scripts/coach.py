@@ -231,6 +231,13 @@ def save_to_notion(data: dict) -> str:
 
     if data["type"] == "é£Ÿäº‹è¨˜éŒ²":
         existing = find_today_meal_record(today)
+        is_practice = data.get("is_practice_day", False)
+
+        # ç›®æ¨™å€¤ï¼ˆç·´ç¿’æ—¥ã‹ã©ã†ã‹ã§åˆ‡æ›¿ï¼‰
+        goal_kcal    = 2700 if is_practice else 2100
+        goal_protein = 117  if is_practice else 104
+        goal_carbs   = 390  if is_practice else 260
+        goal_fat     = 60   if is_practice else 58
 
         if existing:
             # â”€â”€ æ—¢å­˜ãƒ¬ã‚³ãƒ¼ãƒ‰ã«è¿½è¨˜ãƒ»åˆç®— â”€â”€
@@ -241,20 +248,29 @@ def save_to_notion(data: dict) -> str:
             old_content_str = old_content[0]["text"]["content"] if old_content else ""
             new_content_str = old_content_str + "ï½œ" + data.get("content", "") if old_content_str else data.get("content", "")
 
-            old_kcal    = props.get("ã‚«ãƒ­ãƒªãƒ¼(kcal)",  {}).get("number") or 0
-            old_protein = props.get("ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)",   {}).get("number") or 0
-            old_carbs   = props.get("ç‚­æ°´åŒ–ç‰©(g)",     {}).get("number") or 0
-            old_fat     = props.get("è„‚è³ª(g)",         {}).get("number") or 0
+            old_kcal    = props.get("ã‚«ãƒ­ãƒªãƒ¼(kcal)", {}).get("number") or 0
+            old_protein = props.get("ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)",  {}).get("number") or 0
+            old_carbs   = props.get("ç‚­æ°´åŒ–ç‰©(g)",    {}).get("number") or 0
+            old_fat     = props.get("è„‚è³ª(g)",        {}).get("number") or 0
+
+            new_kcal    = round(old_kcal    + data.get("kcal", 0),    1)
+            new_protein = round(old_protein + data.get("protein", 0), 1)
+            new_carbs   = round(old_carbs   + data.get("carbs", 0),   1)
+            new_fat     = round(old_fat     + data.get("fat", 0),     1)
 
             update_body = {
                 "properties": {
-                    "é£Ÿäº‹å†…å®¹":         {"rich_text": [{"text": {"content": new_content_str}}]},
-                    "ã‚«ãƒ­ãƒªãƒ¼(kcal)":   {"number": round(old_kcal    + data.get("kcal", 0),    1)},
-                    "ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)":    {"number": round(old_protein + data.get("protein", 0), 1)},
-                    "ç‚­æ°´åŒ–ç‰©(g)":      {"number": round(old_carbs   + data.get("carbs", 0),   1)},
-                    "è„‚è³ª(g)":          {"number": round(old_fat     + data.get("fat", 0),     1)},
-                    "ç·´ç¿’æ—¥":           {"checkbox": data.get("is_practice_day", False)},
-                    "ãƒ¡ãƒ¢ãƒ»ã‚¢ãƒ‰ãƒã‚¤ã‚¹": {"rich_text": [{"text": {"content": data.get("memo", "")}}]},
+                    "é£Ÿäº‹å†…å®¹":          {"rich_text": [{"text": {"content": new_content_str}}]},
+                    "ã‚«ãƒ­ãƒªãƒ¼(kcal)":    {"number": new_kcal},
+                    "ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)":     {"number": new_protein},
+                    "ç‚­æ°´åŒ–ç‰©(g)":       {"number": new_carbs},
+                    "è„‚è³ª(g)":           {"number": new_fat},
+                    "ç·´ç¿’æ—¥":            {"checkbox": is_practice},
+                    "ãƒ¡ãƒ¢ãƒ»ã‚¢ãƒ‰ãƒã‚¤ã‚¹":  {"rich_text": [{"text": {"content": data.get("memo", "")}}]},
+                    "æ®‹ã‚Šã‚«ãƒ­ãƒªãƒ¼(kcal)":{"number": max(0, round(goal_kcal    - new_kcal,    1))},
+                    "æ®‹ã‚Šã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)": {"number": max(0, round(goal_protein - new_protein, 1))},
+                    "æ®‹ã‚Šç‚­æ°´åŒ–ç‰©(g)":   {"number": max(0, round(goal_carbs   - new_carbs,   1))},
+                    "æ®‹ã‚Šè„‚è³ª(g)":       {"number": max(0, round(goal_fat     - new_fat,     1))},
                 }
             }
             requests.patch(
@@ -266,17 +282,26 @@ def save_to_notion(data: dict) -> str:
 
         else:
             # â”€â”€ æ–°è¦ä½œæˆ â”€â”€
+            new_kcal    = data.get("kcal", 0)
+            new_protein = data.get("protein", 0)
+            new_carbs   = data.get("carbs", 0)
+            new_fat     = data.get("fat", 0)
+
             body = {
                 "parent": {"database_id": DB["é£Ÿäº‹è¨˜éŒ²"]},
                 "properties": {
-                    "æ—¥ä»˜":             {"title": [{"text": {"content": today}}]},
-                    "é£Ÿäº‹å†…å®¹":         {"rich_text": [{"text": {"content": data.get("content", "")}}]},
-                    "ã‚«ãƒ­ãƒªãƒ¼(kcal)":   {"number": data.get("kcal", 0)},
-                    "ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)":    {"number": data.get("protein", 0)},
-                    "ç‚­æ°´åŒ–ç‰©(g)":      {"number": data.get("carbs", 0)},
-                    "è„‚è³ª(g)":          {"number": data.get("fat", 0)},
-                    "ç·´ç¿’æ—¥":           {"checkbox": data.get("is_practice_day", False)},
-                    "ãƒ¡ãƒ¢ãƒ»ã‚¢ãƒ‰ãƒã‚¤ã‚¹": {"rich_text": [{"text": {"content": data.get("memo", "")}}]},
+                    "æ—¥ä»˜":              {"title": [{"text": {"content": today}}]},
+                    "é£Ÿäº‹å†…å®¹":          {"rich_text": [{"text": {"content": data.get("content", "")}}]},
+                    "ã‚«ãƒ­ãƒªãƒ¼(kcal)":    {"number": new_kcal},
+                    "ã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)":     {"number": new_protein},
+                    "ç‚­æ°´åŒ–ç‰©(g)":       {"number": new_carbs},
+                    "è„‚è³ª(g)":           {"number": new_fat},
+                    "ç·´ç¿’æ—¥":            {"checkbox": is_practice},
+                    "ãƒ¡ãƒ¢ãƒ»ã‚¢ãƒ‰ãƒã‚¤ã‚¹":  {"rich_text": [{"text": {"content": data.get("memo", "")}}]},
+                    "æ®‹ã‚Šã‚«ãƒ­ãƒªãƒ¼(kcal)":{"number": max(0, round(goal_kcal    - new_kcal,    1))},
+                    "æ®‹ã‚Šã‚¿ãƒ³ãƒ‘ã‚¯è³ª(g)": {"number": max(0, round(goal_protein - new_protein, 1))},
+                    "æ®‹ã‚Šç‚­æ°´åŒ–ç‰©(g)":   {"number": max(0, round(goal_carbs   - new_carbs,   1))},
+                    "æ®‹ã‚Šè„‚è³ª(g)":       {"number": max(0, round(goal_fat     - new_fat,     1))},
                 },
             }
             requests.post("https://api.notion.com/v1/pages", headers=NOTION_HEADERS, json=body).raise_for_status()
