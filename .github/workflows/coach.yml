@@ -1,0 +1,45 @@
+name: ðŸ¸ Badminton Coach
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  coach:
+    runs-on: ubuntu-latest
+    # è‡ªåˆ†ã®ã‚³ãƒ¡ãƒ³ãƒˆã«ã¯åå¿œã—ãªã„
+    if: github.actor != 'github-actions[bot]'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Coach
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_TOKEN:      ${{ secrets.NOTION_TOKEN }}
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: >-
+            ${{
+              github.event_name == 'issues'
+              && github.event.issue.number
+              || github.event.issue.number
+            }}
+          ISSUE_BODY: >-
+            ${{
+              github.event_name == 'issues'
+              && github.event.issue.body
+              || github.event.comment.body
+            }}
+        run: python scripts/coach.py
