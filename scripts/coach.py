@@ -9,8 +9,19 @@ ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 NOTION_TOKEN      = os.environ["NOTION_TOKEN"]
 GITHUB_TOKEN      = os.environ["GITHUB_TOKEN"]
 REPO              = os.environ["GITHUB_REPOSITORY"]
-ISSUE_NUMBER      = os.environ["ISSUE_NUMBER"]
-ISSUE_BODY        = os.environ["ISSUE_BODY"]
+EVENT_NAME        = os.environ.get("GITHUB_EVENT_NAME", "issues")
+
+# GitHub Actionsã®ã‚¤ãƒ™ãƒ³ãƒˆãƒšã‚¤ãƒ­ãƒ¼ãƒ‰ã‹ã‚‰ç›´æŽ¥èª­ã¿å–ã‚‹ï¼ˆæ–‡å­—åŒ–ã‘ãƒ»æ”¹è¡Œå•é¡Œã‚’å›žé¿ï¼‰
+_event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+with open(_event_path, encoding="utf-8") as f:
+    _event = json.load(f)
+
+if EVENT_NAME == "issue_comment":
+    ISSUE_BODY   = _event["comment"]["body"]
+    ISSUE_NUMBER = str(_event["issue"]["number"])
+else:
+    ISSUE_BODY   = _event["issue"]["body"] or ""
+    ISSUE_NUMBER = str(_event["issue"]["number"])
 
 # â”€â”€ Notion DB IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 DB = {
