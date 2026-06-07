@@ -41,10 +41,10 @@ NOTION_HEADERS = {
 SYSTEM_PROMPT = """
 ã‚ãªãŸã¯ãƒãƒ‰ãƒŸãƒ³ãƒˆãƒ³é¸æ‰‹ï¼ˆ65kg/163cmï¼‰å°‚å±žã®æ „é¤Šã‚³ãƒ¼ãƒã§ã™ã€‚
 
-ã€æ „é¤Šç›®æ¨™ï¼ˆ65kgåŸºæº–ï¼‰ã€‘
-- éžç·´ç¿’æ—¥ï¼š2,100kcalï½œP:104gï½œC:260gï½œF:58g
-- ç·´ç¿’æ—¥(2h)ï¼š2,700kcalï½œP:117gï½œC:390gï½œF:60g
-- ç·´ç¿’æ—¥(6h)ï¼š3,800kcalï½œP:130gï½œC:520gï½œF:84g
+ã€æ „é¤Šç›®æ¨™ï¼ˆ65kgåŸºæº–ãƒ»PFCæ¯”çŽ‡ P:25% / F:20% / C:55%ï¼‰ã€‘
+- éžç·´ç¿’æ—¥ï¼š2,100kcalï½œP:131gï½œF:47gï½œC:289g
+- ç·´ç¿’æ—¥(2h)ï¼š2,700kcalï½œP:169gï½œF:60gï½œC:371g
+- ç·´ç¿’æ—¥(6h)ï¼š3,800kcalï½œP:238gï½œF:84gï½œC:523g
 
 ã€ç¢ºå®šæ¸ˆã¿é£Ÿå“ãƒžã‚¹ã‚¿ãƒ¼ï¼ˆ100gã‚ãŸã‚Šï¼‰ã€‘
 - ã‚ªãƒ¼ãƒˆãƒŸãƒ¼ãƒ«(ãƒ‰ãƒ³ã‚­)ï¼š380kcal P13.3g F6.7g C66.7g
@@ -139,10 +139,10 @@ def get_today_totals(target_date: str) -> dict:
 def ask_claude(user_message: str, today_totals: dict, target_date: str) -> str:
     # ç·´ç¿’æ—¥ã‹ã©ã†ã‹ã§ç›®æ¨™å€¤ã‚’åˆ‡ã‚Šæ›¿ãˆ
     is_practice = today_totals["is_practice_day"]
-    goal_kcal    = 2700  if is_practice else 2100
-    goal_protein = 117   if is_practice else 104
-    goal_carbs   = 390   if is_practice else 260
-    goal_fat     = 60    if is_practice else 58
+    goal_kcal    = 2700 if is_practice else 2100
+    goal_protein = 169  if is_practice else 131
+    goal_carbs   = 371  if is_practice else 289
+    goal_fat     = 60   if is_practice else 47
 
     # æ®‹ã‚Š = ç›®æ¨™ - ç´¯è¨ˆï¼ˆè¿½è¨˜åˆ†ã‚’è¨ˆç®—ã™ã‚‹å‰ã®çŠ¶æ…‹ï¼‰
     rem_kcal    = max(0, goal_kcal    - today_totals["kcal"])
@@ -241,9 +241,9 @@ def save_to_notion(data: dict) -> str:
 
         # ç›®æ¨™å€¤ï¼ˆç·´ç¿’æ—¥ã‹ã©ã†ã‹ã§åˆ‡æ›¿ï¼‰
         goal_kcal    = 2700 if is_practice else 2100
-        goal_protein = 117  if is_practice else 104
-        goal_carbs   = 390  if is_practice else 260
-        goal_fat     = 60   if is_practice else 58
+        goal_protein = 169  if is_practice else 131
+        goal_carbs   = 371  if is_practice else 289
+        goal_fat     = 60   if is_practice else 47
 
         if existing:
             # â”€â”€ æ—¢å­˜ãƒ¬ã‚³ãƒ¼ãƒ‰ã«è¿½è¨˜ãƒ»åˆç®— â”€â”€
