@@ -178,12 +178,14 @@ def ask_claude(user_message: str, today_totals: dict, target_date: str) -> str:
             "content-type": "application/json",
         },
         json={
-            "model": "claude-opus-4-5",
+            "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 2048,
             "system": SYSTEM_PROMPT + "\n\nã€è¿½åŠ ãƒ«ãƒ¼ãƒ«ã€‘å›žç­”ã®æœ€å¾Œã«ã€ŒðŸ“Š æœ¬æ—¥ã®æ®‹ã‚Šç›®æ¨™ã€ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’å¿…ãšè¿½åŠ ã™ã‚‹ã€‚ä»Šå›žã®é£Ÿäº‹ã‚’åŠ ç®—ã—ãŸå¾Œã®æ®‹ã‚Šå¿…è¦é‡ï¼ˆã‚«ãƒ­ãƒªãƒ¼ãƒ»Pãƒ»Fãƒ»Cï¼‰ã‚’è¡¨ç¤ºã—ã€æ®‹ã‚Šã‚’æº€ãŸã™ãŸã‚ã®å…·ä½“çš„ãªé£Ÿå“ä¾‹ã‚’1ã€œ2å€‹ææ¡ˆã™ã‚‹ã“ã¨ã€‚",
             "messages": [{"role": "user", "content": context}],
         },
     )
+    if not resp.ok:
+        print(f"Anthropic API error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
     return resp.json()["content"][0]["text"]
 
@@ -231,7 +233,11 @@ def save_to_notion(data: dict) -> str:
 
     if data["type"] == "é£Ÿäº‹è¨˜éŒ²":
         existing = find_today_meal_record(today)
-        is_practice = data.get("is_practice_day", False)
+        # ç·´ç¿’æ—¥ãƒ•ãƒ©ã‚°ï¼šæ—¢å­˜ãƒ¬ã‚³ãƒ¼ãƒ‰ãŒã‚ã‚Œã°ãã¡ã‚‰ã‚’å„ªå…ˆã€æ–°è¦å…¥åŠ›ã§ä¸Šæ›¸ãå¯
+        existing_practice = False
+        if existing:
+            existing_practice = existing.get("properties", {}).get("ç·´ç¿’æ—¥", {}).get("checkbox", False)
+        is_practice = data.get("is_practice_day", existing_practice)
 
         # ç›®æ¨™å€¤ï¼ˆç·´ç¿’æ—¥ã‹ã©ã†ã‹ã§åˆ‡æ›¿ï¼‰
         goal_kcal    = 2700 if is_practice else 2100
